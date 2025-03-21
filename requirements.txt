@@ -16,12 +16,12 @@ tf-keras
 tesseract
 streamlit
 moviepy.editor
+<<<<<<< HEAD
+pytesseract
+=======
 googletrans==4.0.0-rc1
 easyocr
 setuptools
 tensorflow
 opencv-python
 deep-translator
-openai
-mistral_inference
-huggingface_hub
