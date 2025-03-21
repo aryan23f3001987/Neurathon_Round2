@@ -16,4 +16,13 @@ tf-keras
 tesseract
 streamlit
 moviepy.editor
+<<<<<<< HEAD
 pytesseract
+=======
+googletrans==4.0.0-rc1
+easyocr
+setuptools
+tensorflow
+opencv-python
+deep-translator
+>>>>>>> 880d688c312c31efb81203955c95ef43276a420e
