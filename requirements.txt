@@ -22,3 +22,6 @@ setuptools
 tensorflow
 opencv-python
 deep-translator
+openai
+mistral_inference
+huggingface_hub
