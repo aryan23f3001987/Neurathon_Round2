@@ -11,12 +11,13 @@ if len(sys.argv) < 2:
     sys.exit(1)
 
 audio_path = sys.argv[1]
+language = sys.argv[2] if len(sys.argv) > 2 else None  # Language argument (optional)
 
 # Load Whisper model
 model = whisper.load_model("base")
 
 try:
-    result = model.transcribe(audio_path)
+    result = model.transcribe(audio_path, language=language)  # Set language explicitly if provided
     text = result["text"]
 
     with open("text.txt", "w", encoding="utf-8") as f:

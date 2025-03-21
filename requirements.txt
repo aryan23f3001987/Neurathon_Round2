@@ -14,4 +14,9 @@ sentencepiece
 accelerate
 tf-keras
 tesseract
-streamlit
+googletrans==4.0.0-rc1
+easyocr
+setuptools
+tensorflow
+opencv-python
+deep-translator
