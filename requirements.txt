@@ -16,3 +16,4 @@ tf-keras
 tesseract
 streamlit
 moviepy.editor
+pytesseract
