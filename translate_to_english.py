@@ -19,9 +19,6 @@ def translate_text(text, language):
     lang_map = {
         "hindi": "hi",
         "english": "en",
-        "bengali": "bn",
-        "tamil": "ta",
-        "telugu": "te"
     }
 
     lang_code = lang_map.get(language, "en")  # Default to English

@@ -2,77 +2,115 @@ import streamlit as st
 import os
 import tempfile
 import subprocess
+import time
+import torch
+from pathlib import Path
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# Streamlit app
-def main():
-    st.title("Audio, Text, or Image to Text Converter")
+def save_language(language):
+    with open("language.txt", "w", encoding="utf-8") as lang_file:
+        lang_file.write(language.lower())
 
-    # Clear text.txt on refresh
+def read_text():
     if os.path.exists("text.txt"):
-        os.remove("text.txt")
+        with open("text.txt", "r", encoding="utf-8") as file:
+            return file.read().strip()
+    return ""
 
-    # Ensure uploaded_image is deleted on refresh
-    if os.path.exists("uploaded_image.jpg"):
-        os.remove("uploaded_image.jpg")
+def load_model():
+    model_path = Path.home().joinpath('mistral_models', '7B-Instruct-v0.3')
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    model = AutoModelForCausalLM.from_pretrained(model_path, torch_dtype=torch.float16)
+    if torch.cuda.is_available():
+        model = model.to("cuda")
+    return model, tokenizer
 
-    option = st.radio("Choose an input method:", ["Audio", "Text", "Upload Image"])
+@st.cache_resource
+def get_model():
+    return load_model()
 
-    if option == "Audio":
-        uploaded_audio = st.file_uploader("Upload an audio file (.mp3 or .wav)", type=['mp3', 'wav'])
-        if uploaded_audio is not None:
-            st.audio(uploaded_audio)
-            if st.button("Convert Audio to Text"):
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
-                    temp_audio.write(uploaded_audio.read())
-                    temp_audio_path = temp_audio.name
+model, tokenizer = get_model()
 
-                with st.spinner("Processing audio..."):
-                    result = subprocess.run(["python", "Audio_To_Text_Actual.py", temp_audio_path], capture_output=True, text=True)
-                    st.session_state['text'] = result.stdout.strip()
-                    st.success("Audio conversion complete!")
+def generate_response(prompt, max_new_tokens=150):
+    inputs = tokenizer(prompt, return_tensors="pt")
+    if torch.cuda.is_available():
+        inputs = inputs.to("cuda")
+    outputs = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=True, temperature=0.7, top_p=0.9)
+    return tokenizer.decode(outputs[0], skip_special_tokens=True).replace(prompt, "").strip()
 
-                os.remove(temp_audio_path)  # Cleanup temp file
+def summarize_text(article_text):
+    prompt = f"Below is an article. Summarize it in a few sentences:\n\n{article_text}\n\nSummary:"
+    return generate_response(prompt)
 
-    elif option == "Text":
-        user_text = st.text_area("Enter text below:")
-        if st.button("Save Text"):
-            with open("text.txt", "w") as f:
-                f.write(user_text)
-            st.session_state['text'] = user_text
-            st.success("Text saved successfully!")
+def answer_question(article_text, question):
+    prompt = f"Below is an article:\n\n{article_text}\n\nQuestion: {question}\nAnswer:"
+    return generate_response(prompt)
 
-    elif option == "Upload Image": 
-        uploaded_file = st.file_uploader("\U0001F4F7 Upload an Image", type=["jpg", "png", "jpeg"])
-        
-        if uploaded_file is not None:
-            # Save uploaded image as "uploaded_image.jpg"
-            with open("uploaded_image.jpg", "wb") as f:
-                f.write(uploaded_file.read())
-            
-            st.image("uploaded_image.jpg", caption="Uploaded Image", use_column_width=True)
+def generate_flashcards(article_text):
+    with open("temp_article.txt", "w", encoding="utf-8") as f:
+        f.write(article_text)
+    subprocess.run(["python", "FlashCard2.py", "temp_article.txt"])
+    if os.path.exists("flashcards.txt"):
+        with open("flashcards.txt", "r", encoding="utf-8") as f:
+            return f.read().strip()
+    return "❌ No flashcards generated."
 
-            # Run Image_To_Text.py
-            subprocess.run(["python", "Image_To_Text.py"])
+st.title("Audio, Text, or Image to Text Converter & AI Processing")
+option = st.radio("Choose an input method:", ["Audio (File/YouTube)", "Text", "Upload Image"])
 
-            # Debugging: Check if text.txt exists
-            if os.path.exists("text.txt"):
-                with open("text.txt", "r", encoding="utf-8") as check_file:
-                    extracted_text = check_file.read().strip()
-                    if extracted_text:
-                        st.session_state['text'] = extracted_text  # Store extracted text
-                        st.write("✅ Extracted Text from Image!")
-                    else:
-                        st.write("❌ Image text extraction failed: `text.txt` is empty!")
-            else:
-                st.write("❌ `text.txt` was not created!")
+if option in ["Text", "Upload Image"]:
+    language = st.selectbox("Select language:", ["English", "Hindi"])
+else:
+    language = "English"
+save_language(language)
 
-            # Run translation_to_english.py
-            subprocess.run(["python", "translation_to_english.py"])
+if option == "Audio (File/YouTube)":
+    audio_option = st.radio("Choose audio source:", ["Upload File", "YouTube Link"])
+    if audio_option == "Upload File":
+        uploaded_audio = st.file_uploader("Upload an audio file", type=['mp3', 'wav'])
+        if uploaded_audio and st.button("Convert Audio to Text"):
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+                temp_audio.write(uploaded_audio.read())
+                temp_audio_path = temp_audio.name
+            subprocess.run(["python", "Audio_To_Text_Actual.py", temp_audio_path])
+            os.remove(temp_audio_path)
+    elif audio_option == "YouTube Link":
+        yt_link = st.text_input("Enter YouTube Video Link:")
+        if st.button("Extract & Convert Audio") and yt_link:
+            subprocess.run(["python", "Youtube_Audio_To_Text.py", yt_link])
 
-    # Display extracted text
-    if 'text' in st.session_state:
-        st.subheader("Extracted/Saved Text:")
-        st.write(st.session_state['text'])
+elif option == "Text":
+    user_text = st.text_area("Enter text below:")
+    if st.button("Save Text"):
+        with open("text.txt", "w", encoding="utf-8") as f:
+            f.write(user_text)
 
-if __name__ == "__main__":
-    main()
+elif option == "Upload Image":
+    uploaded_file = st.file_uploader("\U0001F4F7 Upload an Image", type=["jpg", "png", "jpeg"])
+    if uploaded_file:
+        with open("uploaded_image.jpg", "wb") as f:
+            f.write(uploaded_file.read())
+        st.image("uploaded_image.jpg", caption="Uploaded Image", use_column_width=True)
+        subprocess.run(["python", "Image_To_Text.py"])
+
+text_content = read_text()
+if text_content:
+    st.subheader("Extracted/Saved Text")
+    with st.expander("📄 View Text"):
+        st.write(text_content)
+    if st.button("Summarize Article"):
+        with st.spinner("Generating summary..."):
+            st.write(summarize_text(text_content))
+    question = st.text_input("Ask a question about the article:")
+    if st.button("Get Answer") and question:
+        with st.spinner("Generating answer..."):
+            st.write(answer_question(text_content, question))
+    if st.button("Generate Flashcards"):
+        with st.spinner("Generating flashcards..."):
+            st.write(generate_flashcards(text_content))
+
+if st.button("Refresh App"):
+    for file in ["text.txt", "language.txt", "uploaded_image.jpg", "translated.txt"]:
+        if os.path.exists(file):
+            os.remove(file)
+    st.experimental_rerun()

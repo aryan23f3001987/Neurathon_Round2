@@ -25,3 +25,10 @@ setuptools
 tensorflow
 opencv-python
 deep-translator
+bitsandbytes
+whisper yt-dlp
+boto3
+pillow
+evaluate
+wandb
+rouge_score
