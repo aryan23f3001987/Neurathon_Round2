@@ -5,6 +5,15 @@ This Streamlit-based web app extracts text from audio, YouTube videos, and image
 Users can manually input text or extract it from media formats, then leverage AI to summarize content, answer questions, and generate flashcards.
 Designed for students, researchers, and professionals, it streamlines learning by converting raw data into structured insights.
 
+
+Evaluation with Weights & Biases (WandB):
+We use Weights & Biases (WandB) to evaluate the performance of our summarization model.
+This includes:
+ROUGE Score Calculation: Automatically computing ROUGE-1, ROUGE-2, and ROUGE-L scores for generated summaries against ground truth references.
+Logging Sample Summaries: Recording text, generated summaries, and ground truth summaries for performance tracking.
+Result Storage & Analysis: Storing evaluation results in CSV format for further analysis.
+
+
 Features:
 
 Audio to Text Conversion:
@@ -34,8 +43,10 @@ Automatically creates flashcards from extracted text.
 Helps in learning and revision by converting text into a Q&A format.
 Saves the generated flashcards in a separate file for future reference.
 
+
 Tech Stack:
 Python, Streamlit, Hugging Face Transformers, Torch, FFmpeg & Whisper.
+
 
 Files and Scripts:
 app.py: Main Streamlit app.
